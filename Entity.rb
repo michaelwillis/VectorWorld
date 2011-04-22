@@ -1,57 +1,44 @@
+require "matrix"
+
 class Entity
 
   def initialize(points, color, location)
-    @points = points
+    @points = Matrix.rows(points)
     @color = color
-    @location = location
+    @location = Vector.elements(location)
     @mass = 1 #kg
-    @velocity = [0.0, 0.0]
+    @velocity = Vector[0.0, 0.0]
     @drag = 0.2
     @angle = 0
-    @angle_velocity = 0.0
-    @angle_drag = 0.1
+    @spin = 3.1415 / 4
   end
 
   def thrust(vector, seconds)
-    @velocity[0] += vector[0] * seconds
-    @velocity[1] += vector[1] * seconds
+    @velocity = @velocity + Vector.elements(vector) * seconds
   end
 
-  def spin(torque, seconds)
-    # torque is probably a misnomer
-    @angle_velocity += torque * seconds
+  def spin(seconds)
+    @angle += @spin * seconds
   end
 
   def maintain(entities, seconds)
-    @location[0] += @velocity[0] * seconds
-    @location[1] += @velocity[1] * seconds
-    
-    @velocity[0] -= (@drag * @velocity[0] * seconds)
-    @velocity[1] -= (@drag * @velocity[1] * seconds)
-
-    @angle += @angle_velocity * seconds
-    @angle_velocity -= @angle_drag * @angle_velocity * seconds
-  end
-
-  def draw(screen, scale)
+    @location += @velocity * seconds
+    @velocity -= @velocity * @drag * seconds
 
     @cosine = Math.cos @angle
     @sine = Math.sin @angle
 
-    rotated = []
+    @forward = Vector[-@sine,-@cosine]
+  end
 
-    @points.each do |point|
-      rotated.push [point[0] * @cosine - point[1] * @sine,
-                    point[0] * @sine + point[1] * @cosine]
-    end
+  def draw(screen, scale)
 
-    rotated.each_index do |index|
-      screen.draw_line(
-        rotated[index - 1][0] + @location[0],
-        rotated[index - 1][1] + @location[1],
-        rotated[index][0] + @location[0],
-        rotated[index][1] + @location[1],
-        @color)
+    rotated = @points * Matrix[[@cosine,-@sine],[@sine,@cosine]]
+    
+    (0..rotated.row_size() - 1).each do |i|
+      v1 = rotated.row(i - 1) + @location
+      v2 = rotated.row(i) + @location
+      screen.draw_aa_line(v1[0], v1[1], v2[0], v2[1], @color)
     end
   end
 

@@ -14,14 +14,17 @@ end
 def refresh screen
   running = true
   while running
+    events = []
     while event = SDL::Event2.poll
       case event
         when SDL::Event2::Quit
           running = false
+        else
+          events.push(event)
       end
     end
 
-    yield
+    yield(events)
     screen.flip
   end
 end
